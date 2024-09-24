@@ -151,13 +151,3 @@ def reflejarVector(vector, normal):
     ]
     return normalizarVector(reflected)
 
-
-def reflectVector(normal, direction):
-     # R = 2 * (N . L) * N - L
-
-     reflect = 2 * np.dot(normal, direction)
-     reflect = np.multiply(reflect, normal)
-     reflect = np.subtract(reflect, direction)
-     reflect /= np.linalg.norm(reflect)
-
-     return reflect
