@@ -1,57 +1,71 @@
-import numpy as np
+from MathLib import *
 from math import acos, asin, pi
 
 def refractVector(normal, incident, n1, n2):
-
-    normal = np.array(normal)
-    incident = np.array(incident)
+    # Convertir los parámetros a listas
+    normal = list(normal)
+    incident = list(incident)
     
     # Ley de Snell
-    c1 = np.dot(normal, incident)
+    c1 = productoPunto(normal, incident)
     
     if c1 < 0:
         c1 = -c1
     else:
-        normal = np.array(normal) * -1
+        normal = multiplicarPorEscalar(-1, normal)
         n1, n2 = n2, n1
 
     n = n1 / n2
     
-    T = n * (incident + c1 * normal) - normal * (1 - n**2 * (1 - c1**2 )) ** 0.5
+    # Fórmula de refracción
+    T1 = multiplicarPorEscalar(n, [incident[i] + c1 * normal[i] for i in range(3)])
+    T2 = multiplicarPorEscalar(-1, normal)
+    T = [T1[i] + T2[i] * (1 - n**2 * (1 - c1**2))**0.5 for i in range(3)]
     
-    return T / np.linalg.norm(T)
+    # Normalizar el vector resultante
+    return normalizarVector(T)
 
 
 
 def totalInternalReflection(normal, incident, n1, n2):
-	c1 = np.dot(normal, incident)
-	if c1 < 0:
-		c1 = -c1
-	else:
-		n1, n2 = n2, n1
-		
-	if n1 < n2:
-		return False
-	
-	theta1 = acos(c1)
-	thetaC = asin(n2/n1)
-	
-	return theta1 >= thetaC
+    # Usar productoPunto de la librería
+    c1 = productoPunto(normal, incident)
+    
+    if c1 < 0:
+        c1 = -c1
+    else:
+        n1, n2 = n2, n1
+
+    if n1 < n2:
+        return False
+    
+    # Calcular theta1 usando acos
+    theta1 = math.acos(c1)
+    # Calcular thetaC usando asin
+    thetaC = math.asin(n2 / n1)
+    
+    return theta1 >= thetaC
+
 
 
 def fresnel(normal, incident, n1, n2):
-	c1 = np.dot(normal, incident)
-	if c1 < 0:
-		c1 = -c1
-	else:
-		n1, n2 = n2, n1
+    # Usar productoPunto de la librería
+    c1 = productoPunto(normal, incident)
+    
+    if c1 < 0:
+        c1 = -c1
+    else:
+        n1, n2 = n2, n1
 
-	s2 = (n1 * (1 - c1**2)**0.5) / n2
-	c2 = (1 - s2 ** 2) ** 0.5
-	
-	F1 = (((n2 * c1) - (n1 * c2)) / ((n2 * c1) + (n1 * c2))) ** 2
-	F2 = (((n1 * c2) - (n2 * c1)) / ((n1 * c2) + (n2 * c1))) ** 2
+    # Calcular s2 como se indica
+    s2 = (n1 * (1 - c1**2)**0.5) / n2
+    c2 = (1 - s2**2) ** 0.5
+    
+    # Calcular F1 y F2 según las fórmulas de Fresnel
+    F1 = (((n2 * c1) - (n1 * c2)) / ((n2 * c1) + (n1 * c2))) ** 2
+    F2 = (((n1 * c2) - (n2 * c1)) / ((n1 * c2) + (n2 * c1))) ** 2
 
-	Kr = (F1 + F2) / 2
-	Kt = 1 - Kr
-	return Kr, Kt
+    # Calcular coeficientes de reflexión (Kr) y transmisión (Kt)
+    Kr = (F1 + F2) / 2
+    Kt = 1 - Kr
+    return Kr, Kt

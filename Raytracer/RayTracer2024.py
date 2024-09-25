@@ -61,7 +61,7 @@ jade = Material(texture = Texture("textures/jade.bmp"))
 basketball = Material(texture = Texture("textures/basketball.bmp"))
 # blueMirror = Material(diffuse = [0.5, 0.5, 1.0], spec = 128, Ks = 0.2, matType = REFLECTIVE)
 glass = Material(spec = 128, Ks =0.2, ior = 1.5, matType=TRANSPARENT)
-gold = Material(spec = 128, Ks =0.2, ior = 0.470, matType=TRANSPARENT)
+gold = Material([1,1,0],spec = 128, Ks =0.2, ior = 0.470, matType=TRANSPARENT)
 
 
 rt.lights.append(DirectionalLight(direction = [-1, -1, -1], intensity = 0.8))

@@ -54,36 +54,47 @@ class Material(object):
         
         elif self.matType == TRANSPARENT:
             # Revisamos si estamos afuera
-            outside = np.dot(intercept.normal, intercept.rayDirection) < 0
+            outside = productoPunto(intercept.normal, intercept.rayDirection) < 0
 
             # Agregar margen de error
-            bias = [i * 0.001 for i in intercept.normal]
+            bias = multiplicarPorEscalar(0.001, intercept.normal)
 
             # Generamos los rayos de reflección
             rayDir = [-i for i in intercept.rayDirection]
             reflect = reflejarVector(rayDir, intercept.normal)
-            reflectOrig = np.add(intercept.point, bias) if outside else np.subtract(intercept.point, bias)
-            reflectIntercept = renderer.glCastRay(reflectOrig, reflect, None,recursion + 1)
-            if reflectIntercept != None:
+
+            if outside:
+                reflectOrig = [intercept.point[i] + bias[i] for i in range(len(bias))]
+            else:
+                reflectOrig = [intercept.point[i] - bias[i] for i in range(len(bias))]
+
+            reflectIntercept = renderer.glCastRay(reflectOrig, reflect, None, recursion + 1)
+            if reflectIntercept is not None:
                 reflectColor = reflectIntercept.obj.material.GetSurfaceColor(reflectIntercept, renderer, recursion + 1)
-            else: 
+            else:
                 reflectColor = renderer.glEnvMapColor(intercept.point, reflect)
 
             # Generamos los rayos de refracción
             if not totalInternalReflection(intercept.normal, intercept.rayDirection, 1.0, self.ior):
                 refract = refractVector(intercept.normal, intercept.rayDirection, 1.0, self.ior)
-                refractOrig = np.subtract(intercept.point, bias) if outside else np.add(intercept.point, bias)
+
+                if outside:
+                    refractOrig = [intercept.point[i] - bias[i] for i in range(len(bias))]
+                else:
+                    refractOrig = [intercept.point[i] + bias[i] for i in range(len(bias))]
+
                 refractIntercept = renderer.glCastRay(refractOrig, refract, None, recursion + 1)
-                if refractIntercept != None:
+                if refractIntercept is not None:
                     refractColor = refractIntercept.obj.material.GetSurfaceColor(refractIntercept, renderer, recursion + 1)
                 else:
                     refractColor = renderer.glEnvMapColor(intercept.point, reflect)
 
-                # Usando las ecuaciones de Fresnel, determinamos cuanta reflección
-                # y cuanta refracción agregar al color final
-                Kr, Kt =  fresnel(intercept.normal, intercept.rayDirection, 1.0, self.ior)
-                reflectColor = [i * Kr for i in reflectColor]
-                refractColor = [i * Kt for i in refractColor]
+                # Usando las ecuaciones de Fresnel, determinamos cuánta reflección
+                # y cuánta refracción agregar al color final
+                Kr, Kt = fresnel(intercept.normal, intercept.rayDirection, 1.0, self.ior)
+                reflectColor = multiplicarPorEscalar(Kr, reflectColor)
+                refractColor = multiplicarPorEscalar(Kt, refractColor)
+
 
 
 
