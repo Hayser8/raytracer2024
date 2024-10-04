@@ -170,3 +170,144 @@ class AABB(Shape):
                          texCoords=[u, v],
                          rayDirection=dir,
                          obj=self)
+
+class Triangle(Shape):
+    def __init__(self, p0, p1, p2, material):
+        super().__init__(p0, material)
+        self.p0 = p0
+        self.p1 = p1
+        self.p2 = p2
+        self.edge1 = [p1[i] - p0[i] for i in range(3)]
+        self.edge2 = [p2[i] - p0[i] for i in range(3)]
+        self.normal = normalizarVector(productoCruz(self.edge1, self.edge2))
+        self.type = "Triangle"
+
+    def ray_intersect(self, orig, dir):
+        epsilon = 1e-6
+        h = productoCruz(dir, self.edge2)
+        a = productoPunto(self.edge1, h)
+
+        if abs(a) < epsilon:
+            return None
+
+        f = 1.0 / a
+        s = [orig[i] - self.p0[i] for i in range(3)]
+        u = f * productoPunto(s, h)
+
+        if u < 0.0 or u > 1.0:
+            return None
+
+        q = productoCruz(s, self.edge1)
+        v = f * productoPunto(dir, q)
+
+        if v < 0.0 or u + v > 1.0:
+            return None
+
+        t = f * productoPunto(self.edge2, q)
+
+        if t > epsilon:
+            P = [orig[i] + dir[i] * t for i in range(3)]
+            w = 1 - u - v
+            u_coord = w * 0.0 + u * 1.0 + v * 0.5
+            v_coord = w * 0.0 + u * 0.0 + v * 1.0
+
+            normal = self.normal
+            if productoPunto(dir, normal) > 0:
+                normal = [-normal[i] for i in range(3)]
+
+            return Intercept(
+                point=P,
+                normal=normal,
+                distance=t,
+                texCoords=[u_coord, v_coord],
+                rayDirection=dir,
+                obj=self
+            )
+        else:
+            return None
+
+class Cylinder(Shape):
+    def __init__(self, position, radius, height, material):
+        super().__init__(position, material)
+        self.radius = radius
+        self.height = height
+        self.type = "Cylinder"
+        # Definir los extremos del cilindro (p1 = base, p2 = tapa superior)
+        self.p1 = position
+        self.p2 = [position[0], position[1] + height, position[2]]
+
+    def ray_intersect(self, orig, dir):
+        # Diferencia entre el origen del rayo y la base del cilindro
+        delta_p = [orig[i] - self.p1[i] for i in range(3)]
+
+        # Vector del cilindro a lo largo de la altura (p2 - p1)
+        va = [self.p2[i] - self.p1[i] for i in range(3)]
+        va = normalizarVector(va)  # Normalizar vector
+
+        # Coeficientes de la ecuación cuadrática para el cilindro infinito
+        A = productoPunto(dir, dir) - productoPunto(dir, va) ** 2
+        B = 2 * (productoPunto(delta_p, dir) - productoPunto(dir, va) * productoPunto(delta_p, va))
+        C = productoPunto(delta_p, delta_p) - productoPunto(delta_p, va) ** 2 - self.radius ** 2
+
+        # Resolver la ecuación cuadrática
+        discriminante = B * B - 4 * A * C
+        if discriminante < 0:
+            return None  # No hay intersección
+
+        sqrt_discriminante = math.sqrt(discriminante)
+        t0 = (-B - sqrt_discriminante) / (2 * A)
+        t1 = (-B + sqrt_discriminante) / (2 * A)
+
+        if t0 > t1:
+            t0, t1 = t1, t0
+
+        # Verificar si las intersecciones están dentro de los límites del cilindro finito
+        y0 = orig[1] + t0 * dir[1]
+        y1 = orig[1] + t1 * dir[1]
+
+        if not (self.p1[1] <= y0 <= self.p2[1]):
+            if not (self.p1[1] <= y1 <= self.p2[1]):
+                return None
+            t0 = t1
+
+        # Seleccionar el valor de t más cercano al origen del rayo
+        if t0 < 0:
+            t0 = t1
+            if t0 < 0:
+                return None  # Ambos valores de t son negativos, no hay intersección
+
+        P = [orig[i] + dir[i] * t0 for i in range(3)]
+        normal = [P[0] - self.p1[0], 0, P[2] - self.p1[2]]
+        normal = normalizarVector(normal)
+
+        # Verificar las tapas del cilindro
+        t_cap_bottom = (self.p1[1] - orig[1]) / dir[1] if dir[1] != 0 else float('inf')
+        t_cap_top = (self.p2[1] - orig[1]) / dir[1] if dir[1] != 0 else float('inf')
+
+        P_cap_bottom = [orig[i] + t_cap_bottom * dir[i] for i in range(3)]
+        P_cap_top = [orig[i] + t_cap_top * dir[i] for i in range(3)]
+
+        # Revisar si las intersecciones con las tapas están dentro del radio del cilindro
+        dist_bottom = math.sqrt((P_cap_bottom[0] - self.p1[0]) ** 2 + (P_cap_bottom[2] - self.p1[2]) ** 2)
+        dist_top = math.sqrt((P_cap_top[0] - self.p2[0]) ** 2 + (P_cap_top[2] - self.p2[2]) ** 2)
+
+        if dist_bottom <= self.radius and 0 < t_cap_bottom < t0:
+            t0 = t_cap_bottom
+            P = P_cap_bottom
+            normal = [0, -1, 0]  # Normal de la tapa inferior
+
+        if dist_top <= self.radius and 0 < t_cap_top < t0:
+            t0 = t_cap_top
+            P = P_cap_top
+            normal = [0, 1, 0]  # Normal de la tapa superior
+
+        # Calcular coordenadas UV (opcional, según cómo uses la textura)
+        u = (math.atan2(normal[2], normal[0])) / (2 * math.pi) + 0.5
+        v = (P[1] - self.p1[1]) / self.height
+
+        return Intercept(point=P,
+                         normal=normal,
+                         distance=t0,
+                         texCoords=[u, v],
+                         rayDirection=dir,
+                         obj=self)

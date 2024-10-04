@@ -14,43 +14,78 @@ screen = pygame.display.set_mode((width, height), pygame.SCALED)
 clock = pygame.time.Clock()
 
 rt = RendererRT(screen)
-rt.glClearColor(0.5,0.0,0.0)
+rt.envMap = Texture("textures/parkinglot.bmp")
+rt.glClearColor(0.5, 0.0, 0.0)
 rt.glClear()
 
 # Materiales
-mirror = Material( spec = 128, Ks = 0.2, matType = REFLECTIVE)
-jade = Material(texture = Texture("textures/jade.bmp"))
-basketball = Material(texture = Texture("textures/basketball.bmp"))
-glass = Material(spec = 128, Ks =0.2, ior = 1.5, matType=TRANSPARENT)
-gold = Material([1,1,0],spec = 128, Ks =0.2, ior = 0.470, matType=TRANSPARENT)
+mirror = Material(spec = 128, Ks = 0.2, matType = REFLECTIVE)
+jade = Material(texture=Texture("textures/jade.bmp"))
+glass = Material(spec=128, Ks=0.2, ior=1.5, matType=TRANSPARENT)
+gold = Material([1, 1, 0], spec=128, Ks=0.2, ior=0.470, matType=TRANSPARENT)
 
 snow = Material(diffuse=[1, 1, 1], spec=64, Ks=0.2)  # Blanco para el cuerpo del muñeco
 black = Material(diffuse=[0, 0, 0], spec=128, Ks=0.5)  # Negro para los botones y pupilas
 orange = Material(diffuse=[1, 0.5, 0], spec=64, Ks=0.3)  # Naranja para la nariz
+basketball = Material(texture = Texture("textures/basketball.bmp"))
+mirrortwo = Material(spec = 128, Ks = 0.2, matType = REFLECTIVE)
 gray = Material(diffuse=[0.7, 0.7, 0.7], spec=32, Ks=0.1)  # Gris para los ojos
-mirror = Material(diffuse = [0.9,0.9,0.9], spec=128, Ks=0.2, matType= REFLECTIVE)
 
 # Luces
-# Luces
-rt.lights.append(DirectionalLight(direction = [-1, -1, -1], intensity = 1.5))  # Aumentar intensidad
-rt.lights.append(DirectionalLight(direction = [0.5, -0.5, -1], intensity = 1.5, color = [1, 1, 1]))
-rt.lights.append(AmbientLight(intensity = 0.4))  # Aumentar la luz ambiental
+rt.lights.append(DirectionalLight(direction=[-1, -1, -1], intensity=1.5))  # Aumentar intensidad
+rt.lights.append(DirectionalLight(direction=[0.5, -0.5, -1], intensity=1.5, color=[1, 1, 1]))
+rt.lights.append(AmbientLight(intensity=0.1))  # Aumentar la luz ambiental
 
+# Añadir tres triángulos en la parte superior de la escena
+rt.scene.append(Triangle(
+    p0=[-2, 1, -5], 
+    p1=[-1, 2, -5], 
+    p2=[-2, 2, -5], 
+    material=jade))  # Triángulo opaco
 
-rt.scene.append(Plane(position = [0, -1.5, -5], normal = [0, 1, 0], material = mirror))  # Suelo
-rt.scene.append(Plane(position = [0, 1.5, -5], normal = [0, -1, 0], material = snow))  # Techo
-rt.scene.append(Plane(position = [-2, 0, -5], normal = [1, 0, 0], material = snow))  # Pared izquierda
-rt.scene.append(Plane(position = [2, 0, -5], normal = [-1, 0, 0], material = snow))  # Pared derecha
-rt.scene.append(Plane(position = [0, 0, -7], normal = [0, 0, 1], material = snow))  # Pared del fondo
+rt.scene.append(Triangle(
+    p0=[-0.5, 1, -5], 
+    p1=[0.5, 2, -5], 
+    p2=[-0.5, 2, -5], 
+    material=mirror))  # Triángulo reflectivo
 
+rt.scene.append(Triangle(
+    p0=[1, 1, -5], 
+    p1=[2, 2, -5], 
+    p2=[1, 2, -5], 
+    material=glass))  # Triángulo transparente
 
-# Añadir dos cubos
-rt.scene.append(AABB(position = [-1, -1, -5], sizes = [1, 1, 1], material = jade))  # Cubo 1
-rt.scene.append(AABB(position = [1, -1, -5], sizes = [1, 1, 1], material = black))  # Cubo 2
+# Añadir tres cilindros en la parte inferior de la escena
+rt.scene.append(Cylinder(
+    position=[-2, -1, -6], 
+    radius=0.5, 
+    height=1.5, 
+    material=jade))  # Cilindro opaco
 
-# Añadir un disco
-rt.scene.append(Disk(position = [0, -1.4, -4], normal = [0, 1, 0], radius = 0.7, material = orange))  # Disco
+rt.scene.append(Cylinder(
+    position=[0, -1, -6], 
+    radius=0.5, 
+    height=1.5, 
+    material=mirror))  # Cilindro reflectivo
 
+rt.scene.append(Cylinder(
+    position=[2, -1, -6], 
+    radius=0.5, 
+    height=1.5, 
+    material=glass))  # Cilindro reflectivo
+
+# rt.scene.append(Cylinder(
+#     position=[2, -1, -6], 
+#     radius=0.5, 
+#     height=1.5, 
+#     material=glass))  # Cilindro transparente
+
+# rt.scene.append(Sphere(position = [-1.5, 0, -5], radius = 0.7, material = jade))
+# rt.scene.append(Sphere(position = [-1.5, -1.5, -5], radius = 0.7, material = basketball))
+# rt.scene.append(Sphere(position = [0, 0, -5], radius = 0.7, material = mirror))
+# rt.scene.append(Sphere(position = [0, -1.5, -5], radius = 0.7, material = mirrortwo))
+# rt.scene.append(Sphere(position = [1.5, 0, -5], radius = 0.7, material = glass))
+# rt.scene.append(Sphere(position = [1.5, -1.5, -5], radius = 0.7, material = gold))
 
 # Renderizar la escena
 rt.glRender()
