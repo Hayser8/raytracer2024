@@ -7,14 +7,14 @@ from lights import *
 from texture import Texture
 
 # Tamaño de la pantalla
-width = 256
-height = 256
+width = 512
+height = 512
 
 screen = pygame.display.set_mode((width, height), pygame.SCALED)
 clock = pygame.time.Clock()
 
 rt = RendererRT(screen)
-rt.envMap = Texture("textures/parkinglot.bmp")
+rt.envMap = Texture("textures/night.bmp")
 rt.glClearColor(0.5, 0.0, 0.0)
 rt.glClear()
 
