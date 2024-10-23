@@ -1,5 +1,6 @@
 from MathLib import reflejarVector
 from refractionFunctions import *
+import numpy as np
 
 
 OPAQUE = 0
@@ -17,14 +18,10 @@ class Material(object):
         self.matType = matType
 
     def GetSurfaceColor(self, intercept, renderer, recursion = 0):
-        # Phong reflection model
-        # LightCOlor = LightColor + Specular
-        # FinalColor = DiffuseColor * LightColor
         lightColor = [0,0,0]
-        reflectColor= [0,0,0]
+        reflectColor = [0,0,0]
         refractColor = [0,0,0]
         finalColor = self.diffuse
-
         if self.texture and intercept.texCoords:
             textureColor = self.texture.getColor(intercept.texCoords[0], intercept.texCoords[1])
             finalColor = [finalColor[i] * textureColor[i] for i in range(3)]
@@ -33,15 +30,26 @@ class Material(object):
             shadowIntercept = None
 
             if light.lightType == "Directional":
-                lightDir = [-i for i in light.direction]
-                shadowIntercept = renderer.glCastRay(intercept.point, lightDir, intercept.obj)
+                LightDir = [-i for i in light.direction]
+                shadowIntercept = renderer.glCastRay(intercept.point, LightDir, intercept.obj)
+
+            elif light.lightType == "Point":
+                LightDir = [light.position[i] - intercept.point[i] for i in range(3)]
+                R = math.sqrt(sum([d**2 for d in LightDir]))
+                LightDir = [d / R for d in LightDir]
+
+                shadowIntercept = renderer.glCastRay(intercept.point, LightDir, intercept.obj)
+
+                if shadowIntercept:
+                    if shadowIntercept.distance >= R:
+                        shadowIntercept = None
+
 
             if shadowIntercept == None:
                 lightColor = [(lightColor[i] + light.GetSpecularColor(intercept, renderer.camera.translate)[i]) for i in range(3)]
 
                 if self.matType == OPAQUE:
                     lightColor = [(lightColor[i] + light.GetLightColor(intercept)[i]) for i in range(3)]
-
 
         if self.matType == REFLECTIVE:
             rayDir = [-i for i in intercept.rayDirection]

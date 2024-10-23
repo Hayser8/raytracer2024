@@ -68,12 +68,21 @@ class Plane(Shape):
 
         P = [orig[i] + dir[i] * t for i in range(3)]
 
+        # Calcular las coordenadas UV para el plano correctamente
+        u = (P[0] - self.position[0]) * 0.1
+        v = (P[2] - self.position[2]) * 0.1
+
+        # Ajustar las coordenadas para que sean continuas y no se rompan
+        u = (u + 10) % 1.0
+        v = (v + 10) % 1.0
+
         return Intercept(point=P,
                          normal=self.normal,
                          distance=t,
-                         texCoords=None,
+                         texCoords=[u, v],
                          rayDirection=dir,
                          obj=self)
+
 
 class Disk(Plane):
     def __init__(self, position, normal, radius, material):
@@ -301,7 +310,7 @@ class Cylinder(Shape):
             P = P_cap_top
             normal = [0, 1, 0]  # Normal de la tapa superior
 
-        # Calcular coordenadas UV (opcional, según cómo uses la textura)
+        
         u = (math.atan2(normal[2], normal[0])) / (2 * math.pi) + 0.5
         v = (P[1] - self.p1[1]) / self.height
 
@@ -311,3 +320,90 @@ class Cylinder(Shape):
                          texCoords=[u, v],
                          rayDirection=dir,
                          obj=self)
+
+class Cone(Shape):
+    def __init__(self, position, radius, height, material):
+        super().__init__(position, material)
+        self.radius = radius
+        self.height = height
+        self.type = "Cone"
+
+    def ray_intersect(self, orig, dir):
+        # Diferencia entre el origen del rayo y la base del cono
+        delta_p = [orig[i] - self.position[i] for i in range(3)]
+        k = self.radius / self.height
+        k2 = k * k
+        
+        va = [0, self.height, 0]
+        va = normalizarVector(va)
+
+        A = productoPunto(dir, dir) - (1 + k2) * (productoPunto(dir, va) ** 2)
+        B = 2 * (productoPunto(delta_p, dir) - (1 + k2) * productoPunto(dir, va) * productoPunto(delta_p, va))
+        C = productoPunto(delta_p, delta_p) - (1 + k2) * (productoPunto(delta_p, va) ** 2)
+
+        discriminante = B * B - 4 * A * C
+        if discriminante < 0:
+            return None
+
+        sqrt_discriminante = math.sqrt(discriminante)
+        t0 = (-B - sqrt_discriminante) / (2 * A)
+        t1 = (-B + sqrt_discriminante) / (2 * A)
+
+        if t0 > t1:
+            t0, t1 = t1, t0
+
+        # Validar que la intersección esté dentro del cono
+        y0 = orig[1] + t0 * dir[1]
+        if not (self.position[1] <= y0 <= self.position[1] + self.height):
+            t0 = t1
+            y0 = orig[1] + t0 * dir[1]
+            if not (self.position[1] <= y0 <= self.position[1] + self.height):
+                return None
+
+        if t0 < 0:
+            return None
+
+        P = [orig[i] + dir[i] * t0 for i in range(3)]
+        normal = [P[0] - self.position[0], 0, P[2] - self.position[2]]
+        normal = normalizarVector(normal)
+
+        return Intercept(point=P,
+                         normal=normal,
+                         distance=t0,
+                         texCoords=None,
+                         rayDirection=dir,
+                         obj=self)
+
+class Pyramid(Shape):
+    def __init__(self, position, base, height, material):
+        super().__init__(position, material)
+        self.base = base
+        self.height = height
+        self.type = "Pyramid"
+        # Definir vértices de la base y el vértice superior
+        self.vertices = [
+            [position[0] - base / 2, position[1], position[2] - base / 2],
+            [position[0] + base / 2, position[1], position[2] - base / 2],
+            [position[0] + base / 2, position[1], position[2] + base / 2],
+            [position[0] - base / 2, position[1], position[2] + base / 2],
+            [position[0], position[1] + height, position[2]]
+        ]
+
+    def ray_intersect(self, orig, dir):
+        # Crear 4 triángulos para las caras laterales
+        triangles = [
+            Triangle(self.vertices[0], self.vertices[1], self.vertices[4], self.material),
+            Triangle(self.vertices[1], self.vertices[2], self.vertices[4], self.material),
+            Triangle(self.vertices[2], self.vertices[3], self.vertices[4], self.material),
+            Triangle(self.vertices[3], self.vertices[0], self.vertices[4], self.material),
+        ]
+
+        intercept = None
+        t = float("inf")
+        for triangle in triangles:
+            temp_intercept = triangle.ray_intersect(orig, dir)
+            if temp_intercept and temp_intercept.distance < t:
+                t = temp_intercept.distance
+                intercept = temp_intercept
+
+        return intercept
